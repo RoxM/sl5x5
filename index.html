@@ -466,6 +466,21 @@
     margin-top: 8px;
   }
 
+  .export-btn {
+    background: transparent;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    border-radius: 6px;
+    padding: 10px 16px;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.12s;
+  }
+  .export-btn:active { background: rgba(74,240,160,0.1); }
+
   /* TOAST */
   .toast {
     position: fixed;
@@ -537,6 +552,7 @@
   </div>
   <div class="config-section">
     <p class="config-title">DATOS</p>
+    <button class="export-btn" onclick="exportData()">📥 Descargar datos JSON</button>
     <button class="reset-btn" onclick="confirmReset()">Reiniciar todo el progreso</button>
   </div>
 </div>
@@ -842,6 +858,29 @@ function updateStartWeight(exId, val) {
   state.startWeights[exId] = v;
   saveState(state);
   showToast('Peso inicial guardado');
+}
+
+function exportData() {
+  const exportObj = {
+    exportDate: new Date().toISOString(),
+    currentWeights: state.weights,
+    startWeights: state.startWeights,
+    nextWorkout: state.nextWorkout,
+    sessions: state.sessions
+  };
+  
+  const dataStr = JSON.stringify(exportObj, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sl5x5_data_${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  showToast('✓ Datos descargados');
 }
 
 function confirmReset() {
