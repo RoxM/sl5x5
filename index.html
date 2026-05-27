@@ -563,7 +563,7 @@
 const EXERCISES = [
   { id: 'squat',   name: 'Squat',          inc: 5,  start: 70, deadlift: false },
   { id: 'bench',   name: 'Bench Press',    inc: 5,  start: 45, deadlift: false },
-  { id: 'dead',    name: 'Deadlift',       inc: 10, start: 65, deadlift: true  },
+  { id: 'dead',    name: 'Deadlift',       inc: 5,  start: 65, deadlift: true  },
   { id: 'row',     name: 'Barbell Row',    inc: 5,  start: 45, deadlift: false },
   { id: 'ohp',     name: 'Overhead Press', inc: 5,  start: 45, deadlift: false },
 ];
@@ -731,6 +731,26 @@ function toggleSet(exId, idx) {
     </div>
   `).join('');
   card.querySelector('.sets-grid').innerHTML = setsHTML;
+  
+  // Auto-save current progress to localStorage
+  const sessionData = {
+    workout: state.nextWorkout,
+    date: document.getElementById('sessionDate').value || todayISO(),
+    dateStr: formatDateStr(document.getElementById('sessionDate').value || todayISO()),
+    exercises: WORKOUTS[state.nextWorkout].exs.map(id => {
+      const exDef = EXERCISES.find(e => e.id === id);
+      const repsEl = document.getElementById('reps-'+id);
+      const notesEl = document.getElementById('notes-'+id);
+      return {
+        id, name: exDef.name,
+        weight: state.weights[id],
+        sets: [...(currentSets[id]||[])],
+        reps: repsEl ? repsEl.value : '',
+        notes: notesEl ? notesEl.value : '',
+      };
+    })
+  };
+  localStorage.setItem('sl5x5_draft', JSON.stringify(sessionData));
 }
 
 function changeWeight(exId, dir) {
@@ -838,7 +858,7 @@ function renderConfig() {
         <div class="config-row-label">${ex.name}</div>
         <div class="config-row-sub">actual: ${state.weights[ex.id]} lb</div>
       </div>
-      <input class="config-input" type="number" step="${ex.inc}" value="${state.startWeights[ex.id]||ex.start}"
+      <input class="config-input" type="number" step="5" value="${state.startWeights[ex.id]||ex.start}"
         onchange="updateStartWeight('${ex.id}', this.value)">
     </div>
   `).join('');
@@ -847,9 +867,18 @@ function renderConfig() {
       <div>
         <div class="config-row-label">${ex.name}</div>
       </div>
-      <input class="config-input" type="number" step="2.5" value="${ex.inc}" disabled style="opacity:0.4">
+      <input class="config-input" type="number" step="0.5" value="${ex.inc}"
+        onchange="updateIncrement('${ex.id}', this.value)" style="opacity:1">
     </div>
   `).join('');
+}
+
+function updateIncrement(exId, val) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v <= 0) return;
+  const ex = EXERCISES.find(e => e.id === exId);
+  if (ex) ex.inc = v;
+  showToast('Incremento actualizado');
 }
 
 function updateStartWeight(exId, val) {
