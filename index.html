@@ -19,7 +19,7 @@
     --accent2: #4af0a0;
     --danger: #f04a4a;
     --text: #ffffff;
-    --muted: #666;
+    --muted: #ffffff;
     --mono: 'Space Mono', monospace;
     --sans: 'DM Sans', sans-serif;
   }
@@ -656,17 +656,34 @@ function renderWorkout() {
   document.getElementById('headerSub').textContent = wk.title;
   document.getElementById('btnA').classList.toggle('active', state.nextWorkout === 'A');
   document.getElementById('btnB').classList.toggle('active', state.nextWorkout === 'B');
-  // Set date input to today
-  const dateEl = document.getElementById('sessionDate');
-  if (!dateEl.value) dateEl.value = todayISO();
 
-  // Init sets state
+  // Restore draft if it exists and matches current workout
+  const draftRaw = localStorage.getItem('sl5x5_draft');
+  let draft = null;
+  try { draft = draftRaw ? JSON.parse(draftRaw) : null; } catch {}
+  const useDraft = draft && draft.workout === state.nextWorkout;
+
+  const dateEl = document.getElementById('sessionDate');
+  if (useDraft && draft.date) {
+    dateEl.value = draft.date;
+  } else if (!dateEl.value) {
+    dateEl.value = todayISO();
+  }
+
+  // Init sets state from draft or fresh
   wk.exs.forEach(id => {
     const ex = EXERCISES.find(e => e.id === id);
     const numSets = ex.deadlift ? 1 : 5;
-    if (!currentSets[id]) currentSets[id] = Array(numSets).fill(0);
-    if (!currentReps[id]) currentReps[id] = '';
-    if (!currentNotes[id]) currentNotes[id] = '';
+    if (useDraft) {
+      const dex = draft.exercises && draft.exercises.find(e => e.id === id);
+      currentSets[id] = dex && dex.sets && dex.sets.length === numSets ? dex.sets : Array(numSets).fill(0);
+      currentReps[id] = dex ? (dex.reps || '') : '';
+      currentNotes[id] = dex ? (dex.notes || '') : '';
+    } else {
+      if (!currentSets[id]) currentSets[id] = Array(numSets).fill(0);
+      if (!currentReps[id]) currentReps[id] = '';
+      if (!currentNotes[id]) currentNotes[id] = '';
+    }
   });
 
   const list = document.getElementById('exerciseList');
@@ -805,6 +822,7 @@ function saveSession() {
   state.sessions.unshift(sessionData);
   state.nextWorkout = state.nextWorkout === 'A' ? 'B' : 'A';
   saveState(state);
+  localStorage.removeItem('sl5x5_draft');
 
   // Reset current
   currentSets = {}; currentReps = {}; currentNotes = {};
