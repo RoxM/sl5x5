@@ -18,7 +18,7 @@
     --accent: #e8f04a;
     --accent2: #4af0a0;
     --danger: #f04a4a;
-    --text: #f0ede8;
+    --text: #ffffff;
     --muted: #666;
     --mono: 'Space Mono', monospace;
     --sans: 'DM Sans', sans-serif;
@@ -707,32 +707,16 @@ function buildExCard(id) {
       <div class="reps-row">
         <span class="reps-label">REPS fallidas:</span>
         <input class="reps-input" type="number" min="0" max="5" placeholder="0" value="${currentReps[id]}"
-          onchange="currentReps['${id}']=this.value" id="reps-${id}">
+          oninput="currentReps['${id}']=this.value; autoSaveDraft()" id="reps-${id}">
       </div>
       <div class="notes-row">
-        <textarea class="notes-input" placeholder="Notas opcionales..." onchange="currentNotes['${id}']=this.value" id="notes-${id}">${currentNotes[id]}</textarea>
+        <textarea class="notes-input" placeholder="Notas opcionales..." oninput="currentNotes['${id}']=this.value; autoSaveDraft()" id="notes-${id}">${currentNotes[id]}</textarea>
       </div>
     </div>
   `;
 }
 
-function toggleSet(exId, idx) {
-  if (!currentSets[exId]) return;
-  const cur = currentSets[exId][idx];
-  currentSets[exId][idx] = cur === 0 ? 1 : cur === 1 ? 2 : 0;
-  const card = document.getElementById(`card-${exId}`);
-  // re-render only sets grid
-  const ex = EXERCISES.find(e => e.id === exId);
-  const sets = currentSets[exId];
-  const setsHTML = sets.map((s, i) => `
-    <div class="set-item">
-      <div class="set-label">S${i+1}</div>
-      <button class="set-btn${s===1?' done':s===2?' fail':''}" onclick="toggleSet('${exId}',${i})">${s===0?'—':s===1?'✓':'✗'}</button>
-    </div>
-  `).join('');
-  card.querySelector('.sets-grid').innerHTML = setsHTML;
-  
-  // Auto-save current progress to localStorage
+function autoSaveDraft() {
   const sessionData = {
     workout: state.nextWorkout,
     date: document.getElementById('sessionDate').value || todayISO(),
@@ -751,6 +735,32 @@ function toggleSet(exId, idx) {
     })
   };
   localStorage.setItem('sl5x5_draft', JSON.stringify(sessionData));
+}
+
+function toggleSet(exId, idx) {
+  if (!currentSets[exId]) return;
+  const cur = currentSets[exId][idx];
+  currentSets[exId][idx] = cur === 0 ? 1 : cur === 1 ? 2 : 0;
+  const card = document.getElementById(`card-${exId}`);
+  const ex = EXERCISES.find(e => e.id === exId);
+  const sets = currentSets[exId];
+  const setsHTML = sets.map((s, i) => `
+    <div class="set-item">
+      <div class="set-label">S${i+1}</div>
+      <button class="set-btn${s===1?' done':s===2?' fail':''}" onclick="toggleSet('${exId}',${i})">${s===0?'—':s===1?'✓':'✗'}</button>
+    </div>
+  `).join('');
+  card.querySelector('.sets-grid').innerHTML = setsHTML;
+
+  // Auto-update failed reps counter
+  const failCount = currentSets[exId].filter(s => s === 2).length;
+  const repsEl = document.getElementById('reps-' + exId);
+  if (repsEl) {
+    repsEl.value = failCount > 0 ? failCount : '';
+    currentReps[exId] = failCount > 0 ? String(failCount) : '';
+  }
+
+  autoSaveDraft();
 }
 
 function changeWeight(exId, dir) {
